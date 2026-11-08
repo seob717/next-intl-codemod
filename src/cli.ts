@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {parseArgs} from 'node:util';
-import {applyEdits, type CatalogFormat, writeCatalogs} from './apply.js';
+import {applyEdits, assertCatalogsSupported, type CatalogFormat, writeCatalogs} from './apply.js';
 import {loadCatalogs} from './catalog.js';
 import {collectSourceFiles} from './files.js';
 import {buildPlan, type NamespaceStrategy} from './plan.js';
@@ -50,6 +50,7 @@ if (!['po', 'json'].includes(format)) throw new Error(`Unknown format: ${format}
 if (!['none', 'first-segment', 'keep'].includes(namespace)) throw new Error(`Unknown namespace strategy: ${namespace}`);
 
 const catalogs = loadCatalogs(values.messages, projectRoot, values['source-locale']);
+assertCatalogsSupported({outDir: path.resolve(projectRoot, values.out), format, locales: catalogs.locales});
 const files: Array<string> = [];
 for (const dir of values.src) collectSourceFiles(path.resolve(projectRoot, dir), files);
 const scanned = scanFiles(files);

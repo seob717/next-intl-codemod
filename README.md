@@ -30,7 +30,8 @@ t.rich('Please accept the <link>terms</link>.', {link: (chunks) => <a>{chunks}</
    the extractor does (SHA-512, base64url, 6 chars), so a later `next dev` / `next build` leaves the
    catalogs untouched.
 2. Catalogs for all locales are written in the extraction format (`po` or `json`) with the old
-   translations filled in. An existing extraction catalog is merged, never overwritten.
+   translations filled in. An existing extraction catalog is merged, never overwritten. A `.po`
+   catalog in the previous next-intl layout (keys in `msgid`) stops the run before anything changes.
 3. If one source text was translated differently under different keys, each distinct translation set
    keeps its own message with an explicit id (the old key), so no translation is lost:
    ```tsx
@@ -84,7 +85,7 @@ catalog cannot be inlined and are reported as `missing-key`.
 
 ## Verification
 
-The codemod was validated against a real migration of a production app (2,109 keys, 352 files):
+The codemod was validated on a production app:
 
 - running next-intl's extractor over the converted sources reproduces the written catalogs byte for byte;
 - every migrated key resolves to a catalog entry whose translations equal the old ones, in every locale;

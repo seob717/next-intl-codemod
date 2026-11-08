@@ -1,3 +1,7 @@
+import {execFileSync} from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import {describe, expect, it} from 'vitest';
 import {generateId} from '../src/id.js';
 import {run} from './run.js';
@@ -359,6 +363,24 @@ t('title');
 const t = useX();
 t('Hello');
 `);
+  });
+});
+
+describe('cli', () => {
+  it('stops before changing anything when a catalog uses the previous PO layout', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'next-intl-codemod-'));
+    const source = `import {useTranslations} from 'next-intl';\nconst t = useTranslations('Home');\nt('title');\n`;
+    const catalog = `msgid ""\nmsgstr ""\n"Language: en\\n"\n"X-Crowdin-SourceKey: msgstr\\n"\n`;
+    fs.mkdirSync(path.join(root, 'src'));
+    fs.mkdirSync(path.join(root, 'messages'));
+    fs.writeFileSync(path.join(root, 'src/A.tsx'), source);
+    fs.writeFileSync(path.join(root, 'messages/en.json'), en);
+    fs.writeFileSync(path.join(root, 'messages/en.po'), catalog);
+
+    const args = ['--import', 'tsx', 'src/cli.ts', '--project-root', root, '--messages', 'messages/{locale}.json', '--source-locale', 'en'];
+    expect(() => execFileSync(process.execPath, args, {stdio: 'pipe'})).toThrow(/previous PO layout/);
+    expect(fs.readFileSync(path.join(root, 'src/A.tsx'), 'utf8')).toBe(source);
+    expect(fs.readFileSync(path.join(root, 'messages/en.po'), 'utf8')).toBe(catalog);
   });
 });
 

@@ -37,6 +37,21 @@ export function applyEdits(edits: Array<Edit>, textByFile: Map<string, string>) 
   }
 }
 
+/** Merging into the previous layout would write a catalog next-intl refuses to read. */
+export function assertCatalogsSupported(options: {outDir: string; format: CatalogFormat; locales: Array<string>}) {
+  if (options.format !== 'po') return;
+  for (const locale of options.locales) {
+    const file = path.join(options.outDir, `${locale}.po`);
+    if (fs.existsSync(file) && fs.readFileSync(file, 'utf8').includes('X-Crowdin-SourceKey: msgstr')) {
+      throw new Error(
+        `${file} uses the previous PO layout of next-intl, which current versions refuse to read. ` +
+          'Migrate it (https://github.com/amannn/next-intl/pull/2393), or delete it if it has no entries, ' +
+          'then run the codemod again. Nothing was changed.'
+      );
+    }
+  }
+}
+
 export function writeCatalogs(
   messages: Array<PlannedMessage>,
   options: {outDir: string; format: CatalogFormat; sourceLocale: string; locales: Array<string>}
