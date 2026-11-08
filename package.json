@@ -1,0 +1,27 @@
+{
+  "name": "next-intl-codemod",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "next-intl-codemod": "./src/cli.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "codemod": "tsx src/cli.ts"
+  },
+  "dependencies": {
+    "@eloqnt/config": "^0.1.1",
+    "@eloqnt/format-json": "^0.1.0",
+    "@eloqnt/format-po": "^0.1.1",
+    "typescript": "^5.9.0"
+  },
+  "devDependencies": {
+    "@swc/core": "^1.16.0",
+    "@types/node": "^26.6.5",
+    "next-intl": "^4.14.9",
+    "next-intl-swc-plugin-extractor": "^4.14.9",
+    "tsx": "^4.20.0",
+    "vitest": "^3.2.0"
+  }
+}
