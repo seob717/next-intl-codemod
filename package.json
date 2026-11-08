@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "type": "module",
   "bin": {
-    "next-intl-codemod": "./dist/cli.js"
+    "next-intl-codemod": "dist/cli.js"
   },
   "scripts": {
     "test": "vitest run",
