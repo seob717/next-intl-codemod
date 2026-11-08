@@ -1,14 +1,15 @@
 {
   "name": "next-intl-codemod",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
   "type": "module",
   "bin": {
-    "next-intl-codemod": "./src/cli.ts"
+    "next-intl-codemod": "./dist/cli.js"
   },
   "scripts": {
     "test": "vitest run",
-    "codemod": "tsx src/cli.ts"
+    "codemod": "tsx src/cli.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "prepublishOnly": "pnpm test && pnpm build"
   },
   "dependencies": {
     "@eloqnt/config": "^0.1.1",
@@ -23,5 +24,14 @@
     "next-intl-swc-plugin-extractor": "^4.14.9",
     "tsx": "^4.20.0",
     "vitest": "^3.2.0"
+  },
+  "license": "MIT",
+  "description": "Migrates next-intl useTranslations/getTranslations with static keys to useExtracted/getExtracted and carries existing translations over.",
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/seob717/next-intl-codemod.git"
   }
 }
