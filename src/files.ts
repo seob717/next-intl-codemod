@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const SOURCE_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx', '.mts', '.mjs']);
+// next-intl's extractor scans exactly these; a message in any other file would be dropped from the catalogs.
+const SOURCE_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx']);
 const IGNORED_DIRS = new Set(['node_modules', '.next', '.git', 'dist', 'build', 'out']);
 
 /** Source files that mention one of the old hooks; everything else cannot change. */

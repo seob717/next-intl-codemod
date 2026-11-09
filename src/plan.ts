@@ -269,10 +269,11 @@ export function buildPlan(
   // disagree, in which case each distinct translation set keeps an explicit id.
   const messages: Array<PlannedMessage> = [];
   const conflicts: Array<Conflict> = [];
-  const idByFullKey = new Map<string, {localId: string; explicit: boolean}>();
+  // Per group: one old key can reach several groups when hooks end up with different namespaces.
+  const idByGroupAndKey = new Map<string, {localId: string; explicit: boolean}>();
   const usedIds = new Set<string>();
 
-  for (const group of groups.values()) {
+  for (const [groupKey, group] of groups) {
     const clusters = new Map<string, Array<GroupEntry>>();
     for (const entry of group.entries.values()) {
       const signature = JSON.stringify(targetLocales.map((locale) => entry.translations[locale]));
@@ -297,7 +298,7 @@ export function buildPlan(
 
       const references: Array<Reference> = [];
       for (const entry of entries) {
-        idByFullKey.set(entry.fullKey, {localId, explicit: isConflict});
+        idByGroupAndKey.set(`${groupKey}\u0000${entry.fullKey}`, {localId, explicit: isConflict});
         for (const {file, call} of entry.sites) {
           references.push({path: relative(options.projectRoot, file), line: call.line, column: call.column});
         }
@@ -316,7 +317,7 @@ export function buildPlan(
   }
 
   for (const {file, call, fullKey, groupKey} of pendingCalls) {
-    const {localId, explicit} = idByFullKey.get(fullKey)!;
+    const {localId, explicit} = idByGroupAndKey.get(`${groupKey}\u0000${fullKey}`)!;
     const text = groups.get(groupKey)!.text;
     const replacement = explicit
       ? `{id: ${toStringLiteral(localId)}, message: ${toStringLiteral(text)}}`

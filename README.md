@@ -79,6 +79,9 @@ Keys whose text was normalized are listed under `normalizedKeys` in the report.
 A key with no translation in a target locale gets an empty entry, which renders as an empty string
 rather than next-intl's missing-message fallback.
 
+Only `.ts`, `.tsx`, `.js` and `.jsx` files are converted, because those are the files next-intl's
+extractor scans.
+
 Run the codemod against the most complete catalog you have: keys missing from the source-locale
 catalog cannot be inlined and are reported as `missing-key`.
 

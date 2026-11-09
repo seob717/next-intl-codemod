@@ -329,6 +329,12 @@ function scanSourceFile(sourceFile: ts.SourceFile, checker: ts.TypeChecker): Sca
         continue;
       }
 
+      // The extractor does not recognize `t?.()`, so the message would be dropped from the catalogs.
+      if (callExpression.questionDotToken || (method !== 'call' && (callExpression.expression as ts.PropertyAccessExpression).questionDotToken)) {
+        binding.problems.push({reason: 'optional-call-not-supported-by-extraction', ...referencePosition});
+        continue;
+      }
+
       const keyNode = callExpression.arguments[0];
       const key = staticString(keyNode);
       if (key === undefined) {

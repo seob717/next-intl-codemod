@@ -367,6 +367,33 @@ t('Hello');
   });
 });
 
+describe('what the extractor cannot see', () => {
+  const source = (call: string) => `import {useTranslations} from 'next-intl';\nconst t = useTranslations('Home');\n${call}\n`;
+
+  it('leaves optional calls untouched', () => {
+    const files = {
+      'messages/en.json': en,
+      'messages/de.json': de,
+      'src/A.tsx': source(`t?.('title');`),
+      'src/B.tsx': source(`t.rich?.('body', {b: (c) => c});`)
+    };
+    const {read, report} = run(files);
+    expect(read('src/A.tsx')).toBe(files['src/A.tsx']);
+    expect(read('src/B.tsx')).toBe(files['src/B.tsx']);
+    expect(report.skipped.flatMap((binding) => binding.problems.map((problem) => problem.reason))).toEqual([
+      'optional-call-not-supported-by-extraction',
+      'optional-call-not-supported-by-extraction'
+    ]);
+  });
+
+  it('leaves files the extractor does not scan untouched', () => {
+    const files = {'messages/en.json': en, 'messages/de.json': de, 'src/A.mts': source(`t('title');`), 'src/B.mjs': source(`t('title');`)};
+    const {read} = run(files);
+    expect(read('src/A.mts')).toBe(files['src/A.mts']);
+    expect(read('src/B.mjs')).toBe(files['src/B.mjs']);
+  });
+});
+
 describe('extractor round trip', () => {
   const messages = {
     plural: '{count, plural, =0 {none} one {# item} other {# items}}',
@@ -386,6 +413,20 @@ describe('extractor round trip', () => {
     .map((key) => `t('${key}', {count: 1, gender: 'female', name: 'A', thing: 'B', b: (c) => c});`)
     .join('\n');
 
+  async function extract(root: string, format: 'po' | 'json') {
+    const cwd = process.cwd();
+    process.chdir(root);
+    try {
+      await unstable_extractMessages({
+        srcPath: 'src',
+        messages: {format, path: 'extracted', locales: ['en', 'de'], sourceLocale: 'en'},
+        extract: true
+      });
+    } finally {
+      process.chdir(cwd);
+    }
+  }
+
   for (const format of ['po', 'json'] as const) {
     it(`leaves ${format} catalogs untouched`, async () => {
       const {root, read} = run(
@@ -400,20 +441,25 @@ describe('extractor round trip', () => {
       const before = files.map(read);
       expect(before[1]).toContain('[de]');
 
-      const cwd = process.cwd();
-      process.chdir(root);
-      try {
-        await unstable_extractMessages({
-          srcPath: 'src',
-          messages: {format, path: 'extracted', locales: ['en', 'de'], sourceLocale: 'en'},
-          extract: true
-        });
-      } finally {
-        process.chdir(cwd);
-      }
+      await extract(root, format);
       expect(files.map(read)).toEqual(before);
     });
   }
+
+  it('keeps one old key apart when two namespaces use it with conflicting translations', async () => {
+    const {root, read} = run(
+      {
+        'messages/en.json': JSON.stringify({M: {a: 'Same'}, Other: {a: 'Same'}}),
+        'messages/de.json': JSON.stringify({M: {a: 'Eins'}, Other: {a: 'Zwei'}}),
+        'src/A.tsx': `import {useTranslations} from 'next-intl';\nconst t = useTranslations('M');\nt('a');\n`,
+        'src/B.tsx': `import {useTranslations} from 'next-intl';\nconst t = useTranslations();\nt('M.a');\nt('Other.a');\n`
+      },
+      {namespace: 'first-segment'}
+    );
+    const before = read('extracted/de.po');
+    await extract(root, 'po');
+    expect(read('extracted/de.po')).toBe(before);
+  });
 });
 
 describe('cli', () => {
