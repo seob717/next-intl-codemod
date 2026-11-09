@@ -56,6 +56,14 @@ t.rich('Please accept the <link>terms</link>.', {link: (chunks) => <a>{chunks}</
 | `--dry-run` | | Report only |
 | `--report <file>` | | JSON report: skipped bindings with reasons, conflicts, old keys never referenced, and `keyMap` (old key → new id) |
 
+## Requirements
+
+The `po` format needs **next-intl 4.14.0 or newer**. That release changed the PO layout, and older
+extractors erase the translations of a catalog in the new layout on the next `next dev` or
+`next build`, so the codemod stops if it finds an older version. In a monorepo, upgrade every
+workspace package to the same version and migrate any other PO catalog that next-intl loads, such as
+a shared package's. The codemod only checks the catalogs in `--out`.
+
 ## Choosing the source locale
 
 Inline messages are written in one locale and that locale must be the `messages.sourceLocale` of

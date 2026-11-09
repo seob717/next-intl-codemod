@@ -367,6 +367,28 @@ t('Hello');
 });
 
 describe('cli', () => {
+  it('stops before changing anything when next-intl is too old for PO catalogs', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'next-intl-codemod-'));
+    const source = `import {useTranslations} from 'next-intl';\nconst t = useTranslations('Home');\nt('title');\n`;
+    fs.mkdirSync(path.join(root, 'app/src'), {recursive: true});
+    fs.mkdirSync(path.join(root, 'app/messages'));
+    fs.mkdirSync(path.join(root, 'node_modules/next-intl'), {recursive: true});
+    fs.writeFileSync(path.join(root, 'app/src/A.tsx'), source);
+    fs.writeFileSync(path.join(root, 'app/messages/en.json'), en);
+    const setVersion = (version: string) =>
+      fs.writeFileSync(path.join(root, 'node_modules/next-intl/package.json'), JSON.stringify({version}));
+    const args = ['--import', 'tsx', 'src/cli.ts', '--project-root', path.join(root, 'app'), '--messages', 'messages/{locale}.json', '--source-locale', 'en'];
+
+    setVersion('4.13.7');
+    expect(() => execFileSync(process.execPath, args, {stdio: 'pipe'})).toThrow(/next-intl 4\.13\.7 is installed/);
+    expect(fs.readFileSync(path.join(root, 'app/src/A.tsx'), 'utf8')).toBe(source);
+    expect(fs.existsSync(path.join(root, 'app/messages/en.po'))).toBe(false);
+
+    setVersion('4.14.0');
+    execFileSync(process.execPath, args, {stdio: 'pipe'});
+    expect(fs.existsSync(path.join(root, 'app/messages/en.po'))).toBe(true);
+  });
+
   it('stops before changing anything when a catalog uses the previous PO layout', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'next-intl-codemod-'));
     const source = `import {useTranslations} from 'next-intl';\nconst t = useTranslations('Home');\nt('title');\n`;

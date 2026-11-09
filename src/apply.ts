@@ -37,6 +37,30 @@ export function applyEdits(edits: Array<Edit>, textByFile: Map<string, string>) 
   }
 }
 
+/**
+ * next-intl 4.14.0 moved PO catalogs to the source text in `msgid` and the key in `msgctxt`. An older
+ * extractor reads that layout as namespace + key and rewrites the catalogs with every translation empty.
+ */
+export function assertNextIntlSupportsPo(options: {projectRoot: string; format: CatalogFormat}) {
+  if (options.format !== 'po') return;
+  for (let dir = options.projectRoot; ; dir = path.dirname(dir)) {
+    const file = path.join(dir, 'node_modules/next-intl/package.json');
+    if (fs.existsSync(file)) {
+      const {version} = JSON.parse(fs.readFileSync(file, 'utf8')) as {version: string};
+      const [major, minor] = version.split('.').map(Number);
+      if (major < 4 || (major === 4 && minor < 14)) {
+        throw new Error(
+          `next-intl ${version} is installed, but PO catalogs written by this codemod need next-intl 4.14.0 or newer: ` +
+            'older extractors erase their translations on the next `next dev` or `next build`. ' +
+            'Upgrade next-intl (including workspace packages) or use --format json. Nothing was changed.'
+        );
+      }
+      return;
+    }
+    if (dir === path.dirname(dir)) return;
+  }
+}
+
 /** Merging into the previous layout would write a catalog next-intl refuses to read. */
 export function assertCatalogsSupported(options: {outDir: string; format: CatalogFormat; locales: Array<string>}) {
   if (options.format !== 'po') return;
