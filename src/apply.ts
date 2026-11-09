@@ -52,7 +52,7 @@ export function assertNextIntlSupportsPo(options: {projectRoot: string; format: 
         throw new Error(
           `next-intl ${version} is installed, but PO catalogs written by this codemod need next-intl 4.14.0 or newer: ` +
             'older extractors erase their translations on the next `next dev` or `next build`. ' +
-            'Upgrade next-intl (including workspace packages) or use --format json. Nothing was changed.'
+            'Upgrade next-intl (including workspace packages), or use --format json with a separate --out. Nothing was changed.'
         );
       }
       return;
@@ -62,8 +62,25 @@ export function assertNextIntlSupportsPo(options: {projectRoot: string; format: 
 }
 
 /** Merging into the previous layout would write a catalog next-intl refuses to read. */
-export function assertCatalogsSupported(options: {outDir: string; format: CatalogFormat; locales: Array<string>}) {
-  if (options.format !== 'po') return;
+export function assertCatalogsSupported(options: {
+  outDir: string;
+  format: CatalogFormat;
+  locales: Array<string>;
+  sourceFiles: Array<string>;
+}) {
+  if (options.format === 'json') {
+    // The extractor deletes every key it can't find in the code, including keys of skipped calls.
+    for (const locale of options.locales) {
+      const file = path.join(options.outDir, `${locale}.json`);
+      if (options.sourceFiles.includes(file)) {
+        throw new Error(
+          `${file} is one of the old catalogs. Writing extraction catalogs there would let the extractor delete ` +
+            'the translations of calls that could not be converted. Pass a different --out. Nothing was changed.'
+        );
+      }
+    }
+    return;
+  }
   for (const locale of options.locales) {
     const file = path.join(options.outDir, `${locale}.po`);
     if (fs.existsSync(file) && fs.readFileSync(file, 'utf8').includes('X-Crowdin-SourceKey: msgstr')) {

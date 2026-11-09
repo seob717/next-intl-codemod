@@ -51,7 +51,12 @@ if (!['none', 'first-segment', 'keep'].includes(namespace)) throw new Error(`Unk
 
 assertNextIntlSupportsPo({projectRoot, format});
 const catalogs = loadCatalogs(values.messages, projectRoot, values['source-locale']);
-assertCatalogsSupported({outDir: path.resolve(projectRoot, values.out), format, locales: catalogs.locales});
+assertCatalogsSupported({
+  outDir: path.resolve(projectRoot, values.out),
+  format,
+  locales: catalogs.locales,
+  sourceFiles: [...catalogs.filesByLocale.values()].flat()
+});
 const files: Array<string> = [];
 for (const dir of values.src) collectSourceFiles(path.resolve(projectRoot, dir), files);
 const scanned = scanFiles(files);

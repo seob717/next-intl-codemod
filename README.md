@@ -64,6 +64,10 @@ extractors erase the translations of a catalog in the new layout on the next `ne
 workspace package to the same version and migrate any other PO catalog that next-intl loads, such as
 a shared package's. The codemod only checks the catalogs in `--out`.
 
+With `--format json`, `--out` must differ from the folder of the old catalogs: the extractor deletes
+keys it can't find in the code, including the ones calls that were skipped still need. The codemod
+stops if they overlap.
+
 ## Choosing the source locale
 
 Inline messages are written in one locale and that locale must be the `messages.sourceLocale` of
@@ -71,6 +75,9 @@ your next-intl config. Pick the language your developers write copy in; it does 
 English. Texts are normalized to NFC before they are written, because ids hash the bytes as written
 and editors save NFC: a decomposed catalog text would otherwise get a new id on its first save.
 Keys whose text was normalized are listed under `normalizedKeys` in the report.
+
+A key with no translation in a target locale gets an empty entry, which renders as an empty string
+rather than next-intl's missing-message fallback.
 
 Run the codemod against the most complete catalog you have: keys missing from the source-locale
 catalog cannot be inlined and are reported as `missing-key`.

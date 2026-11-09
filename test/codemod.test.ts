@@ -2,6 +2,7 @@ import {execFileSync} from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import {unstable_extractMessages} from 'next-intl/extractor';
 import {describe, expect, it} from 'vitest';
 import {generateId} from '../src/id.js';
 import {run} from './run.js';
@@ -366,7 +367,74 @@ t('Hello');
   });
 });
 
+describe('extractor round trip', () => {
+  const messages = {
+    plural: '{count, plural, =0 {none} one {# item} other {# items}}',
+    select: '{gender, select, female {She} other {They}} left',
+    apostrophe: "It''s {name}",
+    literal: "Use '{braces}' here",
+    rich: 'Read <b>the {thing}</b> now',
+    quotes: 'Say "hi"',
+    single: "Don't stop",
+    backslash: 'a\\b',
+    newline: 'one\ntwo',
+    spaces: '  padded  ',
+    emoji: 'Hi 👋🏽'
+  };
+  const translated = Object.fromEntries(Object.entries(messages).map(([key, value]) => [key, `${value} [de]`]));
+  const calls = Object.keys(messages)
+    .map((key) => `t('${key}', {count: 1, gender: 'female', name: 'A', thing: 'B', b: (c) => c});`)
+    .join('\n');
+
+  for (const format of ['po', 'json'] as const) {
+    it(`leaves ${format} catalogs untouched`, async () => {
+      const {root, read} = run(
+        {
+          'messages/en.json': JSON.stringify({Home: messages}),
+          'messages/de.json': JSON.stringify({Home: translated}),
+          'src/A.tsx': `import {useTranslations} from 'next-intl';\nconst t = useTranslations('Home');\n${calls}\n`
+        },
+        {format}
+      );
+      const files = [`extracted/en.${format}`, `extracted/de.${format}`];
+      const before = files.map(read);
+      expect(before[1]).toContain('[de]');
+
+      const cwd = process.cwd();
+      process.chdir(root);
+      try {
+        await unstable_extractMessages({
+          srcPath: 'src',
+          messages: {format, path: 'extracted', locales: ['en', 'de'], sourceLocale: 'en'},
+          extract: true
+        });
+      } finally {
+        process.chdir(cwd);
+      }
+      expect(files.map(read)).toEqual(before);
+    });
+  }
+});
+
 describe('cli', () => {
+  it('stops before changing anything when json output would land on the old catalogs', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'next-intl-codemod-'));
+    const source = `import {useTranslations} from 'next-intl';\nconst t = useTranslations('Home');\nt('title');\n`;
+    fs.mkdirSync(path.join(root, 'src'));
+    fs.mkdirSync(path.join(root, 'messages'));
+    fs.writeFileSync(path.join(root, 'src/A.tsx'), source);
+    fs.writeFileSync(path.join(root, 'messages/en.json'), en);
+    const args = ['--import', 'tsx', 'src/cli.ts', '--project-root', root, '--messages', 'messages/{locale}.json', '--source-locale', 'en', '--format', 'json'];
+
+    expect(() => execFileSync(process.execPath, args, {stdio: 'pipe'})).toThrow(/one of the old catalogs/);
+    expect(fs.readFileSync(path.join(root, 'src/A.tsx'), 'utf8')).toBe(source);
+    expect(fs.readFileSync(path.join(root, 'messages/en.json'), 'utf8')).toBe(en);
+
+    execFileSync(process.execPath, [...args, '--out', 'extracted'], {stdio: 'pipe'});
+    expect(fs.readFileSync(path.join(root, 'messages/en.json'), 'utf8')).toBe(en);
+    expect(fs.existsSync(path.join(root, 'extracted/en.json'))).toBe(true);
+  });
+
   it('stops before changing anything when next-intl is too old for PO catalogs', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'next-intl-codemod-'));
     const source = `import {useTranslations} from 'next-intl';\nconst t = useTranslations('Home');\nt('title');\n`;
