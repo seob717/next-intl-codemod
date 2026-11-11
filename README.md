@@ -8,6 +8,12 @@ and carries the existing translations over so nothing has to be translated again
 npx next-intl-codemod --messages 'messages/{locale}.json' --source-locale en
 ```
 
+The codemod rewrites source files in place, so run it on a clean working tree:
+
+1. Commit or stash your changes.
+2. Preview with `--dry-run --report report.json`. Nothing is written except the report.
+3. Run it for real, then review the diff with `git diff`.
+
 ## What it does
 
 For every `t` that is bound to one of the old hooks and only ever called with static keys:
@@ -55,6 +61,40 @@ t.rich('Please accept the <link>terms</link>.', {link: (chunks) => <a>{chunks}</
 | `--project-root <dir>` | cwd | Base for the `#:` references |
 | `--dry-run` | | Report only |
 | `--report <file>` | | JSON report: skipped bindings with reasons, conflicts, old keys never referenced, and `keyMap` (old key → new id) |
+
+## Output
+
+A run prints a summary. This one is from a dry run on two components, one of which passes a dynamic
+key:
+
+```
+files: 1/2 changed
+bindings: 1 converted, 1 skipped
+calls: 2 converted
+messages: 2 (0 with explicit ids from 0 conflicting texts)
+old keys never referenced statically: 2
+skipped because:
+  1× dynamic-key
+report: report.json
+```
+
+`report.json` points at each skipped binding and maps the migrated keys to their new ids (shortened):
+
+```json
+{
+  "skipped": [
+    {
+      "file": "src/b.tsx",
+      "name": "t",
+      "line": 2,
+      "column": 55,
+      "problems": [{"reason": "dynamic-key", "line": 2, "column": 102}]
+    }
+  ],
+  "unreferencedKeys": ["Checkout.status.ok", "Checkout.status.fail"],
+  "keyMap": {"Checkout.title": "BJ2TKX", "Checkout.pay": "7tOz-m"}
+}
+```
 
 ## Requirements
 
@@ -154,10 +194,29 @@ Then:
     message (which also formats the number) or pass a string.
 - Run the app once: the extractor rewrites nothing if the migration is consistent.
 
+## With an AI coding agent
+
+Agents can migrate files one by one, but carrying every translation over and deciding when one text
+needs explicit ids is easy to get subtly wrong across hundreds of files. Let the codemod do that part
+deterministically, then hand the agent what is left:
+
+```
+Run `npx next-intl-codemod --messages 'messages/{locale}.json' --source-locale en --report report.json`.
+Then go through report.json: rewrite each binding under `skipped` so its keys are static, as described
+in https://next-intl.dev/docs/usage/extraction#static-analysis, fix the `tsc` errors for the calls
+under `valuesNotInMessage`, and run the codemod again until nothing is skipped.
+```
+
 ## Verification
 
-The codemod was validated on a production app:
+The codemod was validated on two production apps:
 
 - running next-intl's extractor over the converted sources reproduces the written catalogs byte for byte;
 - every migrated key resolves to a catalog entry whose translations equal the old ones, in every locale;
 - fixtures in `test/` cover the rewrite rules, conflicts, skipping and import handling.
+
+## Feedback
+
+If a call is converted incorrectly or skipped when it shouldn't be, please
+[open an issue](https://github.com/seob717/next-intl-codemod/issues) with the code snippet and the
+matching entry from `report.json`. See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
