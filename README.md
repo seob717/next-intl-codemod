@@ -87,6 +87,59 @@ catalog cannot be inlined and are reported as `missing-key`.
 
 ## After running
 
+The codemod only touches source files and catalogs. Before the app runs, point next-intl at the new
+catalogs.
+
+1. Enable extraction in `next.config.ts`, with the same `--out`, `--format` and `--source-locale`
+   you passed to the codemod:
+
+   ```ts
+   import createNextIntlPlugin from 'next-intl/plugin';
+
+   const withNextIntl = createNextIntlPlugin({
+     experimental: {
+       srcPath: './src',
+       extract: true,
+       messages: {path: './messages', format: 'po', locales: 'infer', sourceLocale: 'en'}
+     }
+   });
+
+   export default withNextIntl({});
+   ```
+
+2. Load both catalogs in `i18n/request.ts` as long as skipped bindings still read the old one. Merge
+   them deeply: an explicit id such as `Nav.home` arrives as `{Nav: {home}}`, so a shallow spread
+   would replace the old `Nav` namespace and break skipped calls like `t('about')` on it.
+
+   ```ts
+   type Messages = {[key: string]: string | Messages};
+
+   function merge(a: Messages, b: Messages): Messages {
+     const result = {...a};
+     for (const [key, value] of Object.entries(b)) {
+       const prev = result[key];
+       result[key] =
+         typeof prev === 'object' && typeof value === 'object' ? merge(prev, value) : value;
+     }
+     return result;
+   }
+
+   export default getRequestConfig(async ({requestLocale}) => {
+     // …resolve `locale` as before
+     return {
+       locale,
+       messages: merge(
+         (await import(`../../messages/${locale}.json`)).default, // old catalog
+         (await import(`../../messages/${locale}.po`)).default // written by the codemod
+       )
+     };
+   });
+   ```
+
+   Once the report has no skipped bindings left, drop the old catalog and import the `.po` file only.
+
+Then:
+
 - Review the report. Dynamic keys usually become a `switch` or an object literal of `t('…')` calls
   inside the component, as described in [static analysis](https://next-intl.dev/docs/usage/extraction#static-analysis).
 - Old catalogs are not modified. Delete the migrated keys (or the files) once no binding reads them;
