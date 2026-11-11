@@ -26,7 +26,20 @@
     "vitest": "^3.2.0"
   },
   "license": "MIT",
+  "engines": {
+    "node": ">=18.3"
+  },
   "description": "Migrates next-intl useTranslations/getTranslations with static keys to useExtracted/getExtracted and carries existing translations over.",
+  "keywords": [
+    "next-intl",
+    "codemod",
+    "i18n",
+    "nextjs",
+    "useExtracted",
+    "getExtracted",
+    "migration",
+    "po"
+  ],
   "files": [
     "dist"
   ],
