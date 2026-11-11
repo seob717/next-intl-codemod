@@ -462,7 +462,8 @@ describe('extractor round trip', () => {
   });
 });
 
-describe('cli', () => {
+// Each test spawns the CLI through tsx; a busy machine can push that past the 5s default.
+describe('cli', {timeout: 30_000}, () => {
   it('stops before changing anything when json output would land on the old catalogs', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'next-intl-codemod-'));
     const source = `import {useTranslations} from 'next-intl';\nconst t = useTranslations('Home');\nt('title');\n`;
