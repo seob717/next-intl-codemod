@@ -1,5 +1,10 @@
 # next-intl-codemod
 
+> [!IMPORTANT]
+> This codemod has moved to Codemod, which covers more cases:
+> [codemod/next-intl-codemods](https://github.com/codemod/next-intl-codemods/tree/main/codemods/use-translations-to-use-extracted).
+> Use `npx codemod use-translations-to-use-extracted` instead. This repository is archived and no longer maintained.
+
 Migrates a Next.js app from `useTranslations` / `getTranslations` with hand-written keys to
 [`useExtracted` / `getExtracted`](https://next-intl.dev/docs/usage/extraction) with inline messages,
 and carries the existing translations over so nothing has to be translated again.
